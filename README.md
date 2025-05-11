@@ -8,4 +8,4 @@ If no database exist, database-creation sql file should be run first.
 npm-run-seed should be used to run through deletion and new creation of database and tables within.
 
 Util functions
-Contains util functions made too interact with existing databases and data to be implemented so that it may conform with required table layout.
+Contains util functions made to interact with existing databases and data to be implemented so that it may conform with required table layout.
