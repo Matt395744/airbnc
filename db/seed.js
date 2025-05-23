@@ -1,9 +1,11 @@
 const db = require("./connection")
-const {toInput, isHost, addUserId, changeGuestAndPropId, addPropId} = require("./util")
+const {toInput, isHost, addUserId, changeGuestAndPropId, addPropId, propertyAmenities} = require("./util")
 const format = require('pg-format')
 
-async function seed (propertyTypesData, usersData, propertiesData, reviewsData, favouritesData, imagesData, bookingsData) {
+async function seed (propertyTypesData, usersData, propertiesData, reviewsData, favouritesData, imagesData, bookingsData, addAmenities) {
 
+await db.query(`DROP TABLE IF EXISTS propertiesAmenities;`) 
+await db.query(`DROP TABLE IF EXISTS amenities;`)
 await db.query(`DROP TABLE IF EXISTS bookings;`) 
 await db.query(`DROP TABLE IF EXISTS images;`)
 await db.query(`DROP TABLE IF EXISTS favourites;`)
@@ -63,43 +65,56 @@ await db.query(`CREATE TABLE bookings (
     check_out_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`);
 
- await db.query(
-   format(`INSERT INTO property_types (property_type, description) VALUES %L`, 
+await db.query(`CREATE TABLE amenities (
+    amenity VARCHAR PRIMARY KEY);`);
+
+// await db.query(`CREATE TABLE properties_amenities (
+//     property_amenities SERIAL PRIMARY KEY,
+//     property_id INT NOT NULL REFERENCES properties(property_id),
+//     amenity_slug VARCHAR NOT NULL REFERENCES amenities(amenity));`);
+
+
+ const propertyTypes = await db.query(
+   format(`INSERT INTO property_types (property_type, description) VALUES %L RETURNING *`, 
     toInput(propertyTypesData)));
 
-await db.query(
+
+const users = await db.query(
     format(`INSERT INTO users ( first_name, surname, email, phone_number, avatar, is_host)
-        VALUES %L`, isHost(usersData)));
+        VALUES %L RETURNING *`, isHost(usersData)));
 
-const inputForProps =  await addUserId(propertiesData)
+        const userRows = users.rows
 
-await db.query(
+const properties = await db.query(
     format(`INSERT INTO properties (name, property_type, location,  price_per_night, description, host_id) 
-        VALUES %L`, inputForProps));
+        VALUES %L RETURNING *`, addUserId(propertiesData, userRows)));
 
-const inputReviews = await changeGuestAndPropId(reviewsData)
-
-await db.query(
+const reviews = await db.query(
     format(`INSERT INTO reviews (rating, comment, guest_id, property_id)
-        VALUES %L`, inputReviews));
+        VALUES %L RETURNING *`, changeGuestAndPropId(reviewsData, userRows, properties)));
 
-const inputFavourites = await changeGuestAndPropId(favouritesData)
-
-await db.query(
+const favourites =  await db.query(
     format(`INSERT INTO favourites (guest_id, property_id) 
-        VALUES %L`, inputFavourites));
+        VALUES %L RETURNING *`, changeGuestAndPropId(favouritesData, userRows, properties)));
 
-const inputImages = await addPropId(imagesData)
-
-await db.query(
+const images = await db.query(
     format(`INSERT INTO images (image_url, alt_text, property_id)
-        VALUES %L`, inputImages));
+        VALUES %L RETURNING *`, addPropId(imagesData, properties)));
 
-const bookingsInput = await changeGuestAndPropId(bookingsData)
-
-await db.query(
+const bookings = await db.query(
     format(`INSERT INTO bookings (check_in_date, check_out_date, guest_id, property_id)
-        VALUES %L`, bookingsInput));
+        VALUES %L RETURNING *`, changeGuestAndPropId(bookingsData, userRows, properties)));
+
+const amenitites = await db.query(
+    format(`INSERT INTO amenities (amenity)
+        VALUES %L RETURNING *`, addAmenities(propertiesData)));
+
+// const amenityInput = await propertyAmenities(propertiesData)
+// This function needs to separate each amenity with each property id into their own array, not each property id with all amenities
+
+// await db.query(
+//     format(`INSERT INTO properties_amenities (property_id, amenity_slug)
+//         VALUES %L`, amenityInput));
 }
     
 module.exports = seed
