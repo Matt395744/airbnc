@@ -1,5 +1,5 @@
-const {toInput, isHost, alterProperties, alterReviews, extractProperty, extractUser} = require("./util")
-const {propertyTypesData, usersData, propertiesData, reviewsData} = require('./data/test/index')
+const {toInput, isHost, alterProperties, alterReviews, extractProperty, extractUser} = require("../db/util")
+const {propertyTypesData, usersData, propertiesData, reviewsData} = require('../db/data/test/index')
 
 
 describe('toInput creates an array of arrays out of objects within arrays to help readability for psql', () => {

@@ -116,5 +116,5 @@ const amenitites = await db.query(
 //     format(`INSERT INTO properties_amenities (property_id, amenity_slug)
 //         VALUES %L`, amenityInput));
 }
-    
+   
 module.exports = seed
