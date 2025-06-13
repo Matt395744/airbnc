@@ -3,12 +3,21 @@ const app = require("../db/app")
 const seed = require("../db/seed")
 const { addAmenities } = require('../db/util')
 const {propertyTypesData, usersData, propertiesData, reviewsData, favouritesData, imagesData, bookingsData} = require('../db/data/test/index')
+const db = require("../db/connection")
 
+afterAll(() => {
+    db.end()
+})
 
 beforeEach(async() => {
     await  seed(propertyTypesData, usersData, propertiesData, reviewsData, favouritesData, imagesData, bookingsData, addAmenities)
 })
-
+describe('error handler for non existent path', () => {
+    test('non existent endpoint responds with 404 and msg', async () => {
+        const {body} = await request(app).get("/api/false-path").expect(404)
+        expect(body.msg).toBe('path not found')
+    })
+})
 describe('getProperties', () => {
     test('get request from api/properties responds with status of 200', async () => {
         await request(app).get("/api/properties").expect(200)
@@ -23,8 +32,87 @@ describe('getProperties', () => {
             expect(property.hasOwnProperty("host_name")).toBe(true)
         })
     })
+    test('max price query should return properties under the max price per night ', async () => {
+        await request(app).get("/api/properties?maxprice=110").expect(200)
+        const {body} = await request(app).get("/api/properties?maxprice=110")
+        expect(body).toEqual({
+      properties: [
+        {
+          property_id: 3,
+          name: 'Chic Studio Near the Beach',
+          location: 'Brighton, UK',
+          price_per_night: '90',
+          host_name: 'Alice Johnson',
+          times_favourited: '1'
+        },
+        {
+          property_id: 4,
+          name: 'Elegant City Apartment',
+          location: 'Birmingham, UK',
+          price_per_night: '110',
+          host_name: 'Emma Davis',
+          times_favourited: '1'
+        },
+        {
+          property_id: 5,
+          name: 'Charming Studio Retreat',
+          location: 'Bristol, UK',
+          price_per_night: '85',
+          host_name: 'Emma Davis',
+          times_favourited: '1'
+        },
+        {
+          property_id: 8,
+          name: 'Seaside Studio Getaway',
+          location: 'Cornwall, UK',
+          price_per_night: '95',
+          host_name: 'Emma Davis',
+          times_favourited: '1'
+        }
+      ]
+    })
 
+    })
+    test('min price query should return properties above the min price specified', async() => {
+        const {body} = await request(app).get("/api/properties?minprice=200")
+    })
+    test('get using a host id should just return the properties from that host', async() => {
+        await request(app).get('/api/properties?host=3').expect(200)
+        const {body} = await request(app).get('/api/properties?host=3')
+        expect(body).toEqual({
+      properties: [
+        {
+          property_id: 4,
+          name: 'Elegant City Apartment',
+          location: 'Birmingham, UK',
+          price_per_night: '110',
+          host_name: 'Emma Davis',
+          times_favourited: '1'
+        },
+        {
+          property_id: 5,
+          name: 'Charming Studio Retreat',
+          location: 'Bristol, UK',
+          price_per_night: '85',
+          host_name: 'Emma Davis',
+          times_favourited: '1'
+        },
+        {
+          property_id: 8,
+          name: 'Seaside Studio Getaway',
+          location: 'Cornwall, UK',
+          price_per_night: '95',
+          host_name: 'Emma Davis',
+          times_favourited: '1'
+        }
+      ]
+    })
+    })
+    test('get using sort will arrange in ascending or descending order of cost orm popularity', async() => {
+        await request(app).get('/api/properties?sort=price_per_night').expect(200)
+    })
 })
+
 
 describe('getProperty by ID', () => {
     test('get request by ID responds with 200 status', async () =>{
@@ -39,6 +127,15 @@ describe('getProperty by ID', () => {
 test('should log an error if no property with that ID', async() => {
     const {body} = await request(app).get("/api/properties/400")
 })
+    test('invalid ID responds with 400 and message', async() => {
+        const {body} = await request(app).get("/api/properties/invalied-id").expect(400)
+        
+        expect(body.msg).toBe('bad request')
+    })
+    test('valid ID but non-existent responds with 404 and message', async () => {
+        const {body} = await request(app).get('/api/properties/1234').expect(404)
+        expect(body.msg).toBe('property not found')
+    })
 })
 
 describe('get property reviews by ID', () => {
@@ -72,6 +169,20 @@ describe('get users by ID', () => {
 
 describe('should insert new reviews into the reviews table', () => {
     test('post property review should resolve with a status of 201', async () => {
-        await request(app).post("/api/properties/:id/reviews").expect(201)
+     await request(app).post("/api/properties/3/reviews").send({guest_id:1, rating:4, comment:'holy guacamole'}).expect(201)
     })
+    test('returns the new review with added information', async() => {
+        const {body} = await request(app).post("/api/properties/3/reviews").send({guest_id:1, rating:4, comment:'holy guacamole'})
+        expect(typeof body).toBe('object')
+        expect(body.guest_id).toBe(1)
+    })
+})
+describe('should delete review chosen by review id from database', () => {
+    test('delete review should resolve with a status of 204', async () => {
+        await request(app).delete("/api/reviews/3").expect(204)
+    })
+    test('delete review should resolve with an statement saying object has been deleted', async () => {
+        const {body} = await request(app).delete("/api/reviews/3")
+        expect(body).toEqual({})
+})
 })

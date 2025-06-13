@@ -1,18 +1,20 @@
-const { fetchProperties, fetchProperty, fetchPropertyReviews, postPropertyReview} = require("../models/properties-model")
+const { fetchProperties, fetchProperty, fetchPropertyReviews, postPropertyReview, removePropertyReview} = require("../models/properties-model")
 
 exports.getProperties = async (req, res, next) => {
-    const properties = await fetchProperties()
+    const sortBy = req.query
+    const properties = await fetchProperties(sortBy)
     res.status(200).send({properties})
 
 } 
 
 exports.getPropertyById = async (req, res, next) => {
     const {id} = req.params
+    try{
     const property = await fetchProperty(id)
-    if(property.property_name){
-        res.status(404).send({message:'404 Error! Property not found'})
+     res.status(200).send({property})
+    } catch (error){
+        next(error)
     }
-    else res.status(200).send({property})
 }
 
 exports.getPropertyReviews = async (req, res, next) => {
@@ -22,7 +24,16 @@ exports.getPropertyReviews = async (req, res, next) => {
 }
 
 exports.addPropertyReview = async (req, res, next) => {
-    const {id, payload} = req.params
-    const review = await postPropertyReview(id, payload)
+    const {id} = req.params
+    const  {guest_id, rating, comment} = req.body
+    const review = await postPropertyReview(id, guest_id, rating, comment)
     res.status(201).send(review)
+}
+
+exports.deletePropertyReview = async (req, res, next) => {
+    const {id} = req.params
+    const review = await removePropertyReview(id)
+    if (review === undefined){
+        res.status(204).send({})
+    }
 }
