@@ -1,3 +1,5 @@
+process.env.NODE_ENV = 'test'
+
 const request = require("supertest")
 const app = require("../db/app")
 const seed = require("../db/seed")
@@ -108,7 +110,7 @@ describe('getProperties', () => {
       ]
     })
     })
-    test('get using sort will arrange in ascending or descending order of cost orm popularity', async() => {
+    test('get using sort will arrange in ascending or descending order of cost or popularity', async() => {
         await request(app).get('/api/properties?sort=price_per_night').expect(200)
     })
 })
@@ -128,7 +130,7 @@ test('should log an error if no property with that ID', async() => {
     const {body} = await request(app).get("/api/properties/400")
 })
     test('invalid ID responds with 400 and message', async() => {
-        const {body} = await request(app).get("/api/properties/invalied-id").expect(400)
+        const {body} = await request(app).get("/api/properties/invalid-id").expect(400)
         
         expect(body.msg).toBe('bad request')
     })
@@ -140,14 +142,26 @@ test('should log an error if no property with that ID', async() => {
 
 describe('get property reviews by ID', () => {
     test('get reviews request by ID responds with 200 status', async() => {
-        await request(app).get("/api/properties/2/reviews").expect(200)
+        await request(app).get("/api/properties/3/reviews").expect(200)
     })
         test('get request to api/properties/:id/reviews responds with an array of reviews that contains name, rating etc', async () => {
         const {body} = await request(app).get("/api/properties/4/reviews")
-        expect(Array.isArray(body.reviews)).toBe(true)
-        expect(body.reviews.length > 0).toBe(true)
-        expect(body.reviews[0].hasOwnProperty("comment")).toBe(true)
-        expect(body.reviews[0].hasOwnProperty("review_id")).toBe(true)
+        expect(Array.isArray(body.reviews.reviews)).toBe(true)
+        expect(body.reviews.reviews.length > 0).toBe(true)
+        expect(body.reviews.reviews[0].hasOwnProperty("comment")).toBe(true)
+        expect(body.reviews.reviews[0].hasOwnProperty("review_id")).toBe(true)
+    })
+    test('invalid property ID responds with 400 and message', async() => {
+        const {body} = await request(app).get("/api/properties/invalid-id/reviews").expect(400)
+        expect(body.msg).toBe('bad request')
+    })
+    test('valid potential property ID but does not yet existent responds with 404 and message', async () => {
+        const {body} = await request(app).get("/api/properties/1234/reviews").expect(404)
+        expect(body.msg).toBe('review not found')
+    })
+    test('valid property ID but no reviews responds with 404 and message', async () => {
+        const {body} = await request(app).get("/api/properties/2/reviews").expect(404)
+        expect(body.msg).toBe('review not found')
     })
 })
 
@@ -165,6 +179,14 @@ describe('get users by ID', () => {
         expect(body.user.first_name).toBe('Bob')
         expect(body.user.surname).toBe('Smith')
     })
+    test('invalid user ID responds with 400 and message', async() => {
+        const {body} = await request(app).get("/api/users/me-person").expect(400)
+        expect(body.msg).toBe('bad request')
+    })
+    test('valid ID but non-existent user responds with 404 and message', async () => {
+        const {body} = await request(app).get("/api/users/5678").expect(404)
+        expect(body.msg).toBe('user not found')
+    })
 })
 
 describe('should insert new reviews into the reviews table', () => {
@@ -176,7 +198,24 @@ describe('should insert new reviews into the reviews table', () => {
         expect(typeof body).toBe('object')
         expect(body.guest_id).toBe(1)
     })
+    test('should return 404 property not found if property ID valid but not existent', async () => {
+        const {body} = await request(app).post("/api/properties/3456/reviews").send({guest_id:1, rating:4, comment:'holy guacamole'}).expect(404)
+        expect(body.msg).toBe('key not found')
+    })
+    test('should return with 400 bad request if try to send an invalid key which cannot be null', async() => {
+        const {body} = await request(app).post("/api/properties/3/reviews").send({personIdentifier:1, rating:4, comment:'holy guacamole'}).expect(400)
+        expect(body.msg).toBe('bad request')
+    })
+    test('should return with 400 bad request if try to send an invalid syntax for key', async() => {
+        const {body} = await request(app).post("/api/properties/3/reviews").send({guest_id:1, rating:'Distinct cabbage smell', comment:'holy guacamole'}).expect(400)
+        expect(body.msg).toBe('bad request')
+    })
+    test('should return 404 if given invalid guest_id', async () => {
+        const {body} = await request(app).post("/api/properties/6/reviews").send({guest_id:999, rating:4, comment:'holy guacamole'}).expect(404)
+        expect(body.msg).toBe('key not found')
+    })
 })
+
 describe('should delete review chosen by review id from database', () => {
     test('delete review should resolve with a status of 204', async () => {
         await request(app).delete("/api/reviews/3").expect(204)
@@ -185,4 +224,54 @@ describe('should delete review chosen by review id from database', () => {
         const {body} = await request(app).delete("/api/reviews/3")
         expect(body).toEqual({})
 })
+test('should return 404  review not found if use valid review ID that does not exist', async() => {
+    const{body} = await request(app).delete("/api/reviews/81").expect(404)
+    expect(body.msg).toBe('review not found')
+})
+test('should return 400  review not found if use invalid review ID', async() => {
+    const{body} = await request(app).delete("/api/reviews/eighty-one").expect(400)
+    expect(body.msg).toBe('bad request')
+})
+})
+describe('patch should update users details when given', () => {
+    test('patch should return with a status of 200', async () => {
+        await request(app).patch("/api/users/4").send({email:'person@whyme.com'}).expect(200)
+    })
+    test('should return user with correct keys', async () => {
+        const {body} = await request(app).patch("/api/users/4").send({email:'person@whyme.com'}) 
+        expect(body).toEqual({
+        user_id: 4,
+        first_name: 'Frank',
+        surname: 'White',
+        email: 'person@whyme.com',
+        phone_number: '+44 7000 444444',
+        avatar: 'https://example.com/images/frank.jpg',
+        is_host: false,
+        created_at: null
+      })
+    })
+    test('should work with multiple paramaters', async() => {
+        const {body} = await request(app).patch("/api/users/4").send({email:'person@whyme.com', first_name: 'Not Frank Anymore'}) 
+        expect(body).toEqual({
+        user_id: 4,
+        first_name: 'Not Frank Anymore',
+        surname: 'White',
+        email: 'person@whyme.com',
+        phone_number: '+44 7000 444444',
+        avatar: 'https://example.com/images/frank.jpg',
+        is_host: false,
+        created_at: null
+      })
+    })
+    test('should return with 400 if invalid ID is input', async () => {
+        const {body} = await request(app).patch("/api/users/ohhh").send({email:'person@whyme.com'}).expect(400)
+        expect(body.msg).toBe('bad request')
+    })
+    test('should return 404 user not found if valid ID is provided', async() => {
+        const {body} = await request(app).patch("/api/users/993").send({email:'person@whyme.com'}).expect(404)
+        expect(body.msg).toBe('user not found')
+    })
+    test('should return 404 not found if try to patch a non existent key', async () => {
+        const{body} = await request(app).patch("/api/users/3").send({bigSnail:'person@whyme.com'}).expect(404)
+    })
 })
