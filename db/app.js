@@ -1,6 +1,6 @@
 const express = require("express")
 const {getProperties, getPropertyById, getPropertyReviews, addPropertyReview} = require("../controllers/properties-controller")
-const {getUserById} = require("../controllers/users-controller")
+const {getUserById, patchUser} = require("../controllers/users-controller")
 const { deletePropertyReview } = require("../controllers/properties-controller")
 const {handlePathNotFound, handleBadRequests, handleCustomErrors} = require("../controllers/errors")
 
@@ -19,6 +19,8 @@ app.get("/api/users/:id", getUserById)
 app.post("/api/properties/:id/reviews", addPropertyReview)
 
 app.delete("/api/reviews/:id", deletePropertyReview)
+
+app.patch("/api/users/:id", patchUser)
 
 app.all("/*badpath", handlePathNotFound)
 
