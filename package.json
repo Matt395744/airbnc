@@ -7,12 +7,11 @@
     "test-utils": "jest util",
     "test": "jest app",
     "seed": "node ./db/seed-run",
-    "seed-prod":"NODE_ENV=production node ./db/seed-run",
+    "seed-prod": "NODE_ENV=production node ./db/seed-run",
     "seed-test": "NODE_ENV=test node ./db/seed-run",
     "setup-db": "psql -f ./db/database-creation.sql",
     "dev": "nodemon listen.js",
     "start": "node listen.js"
-    
   },
   "repository": {
     "type": "git",
@@ -26,6 +25,7 @@
   },
   "homepage": "https://github.com/Matt395744/airbnc#readme",
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "jest": "^29.7.0",
