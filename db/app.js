@@ -3,7 +3,7 @@ const {getProperties, getPropertyById, getPropertyReviews, addPropertyReview} = 
 const {getUserById, patchUser} = require("../controllers/users-controller")
 const { deletePropertyReview } = require("../controllers/properties-controller")
 const {handlePathNotFound, handleBadRequests, handleCustomErrors} = require("../controllers/errors")
-const cors = require('cors')
+const cors = require("cors")
 
 const app = express()
 
